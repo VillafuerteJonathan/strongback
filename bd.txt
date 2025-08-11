@@ -1,0 +1,119 @@
+
+
+CREATE DATABASE IF NOT EXISTS ecommerce_zapatos;
+USE ecommerce_zapatos;
+
+CREATE TABLE usuario_admin (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) NOT NULL, -- Hash de la contraseña
+    telefono VARCHAR(20),
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT,
+    imagen_url VARCHAR(255), -- Se guarda la URL de la imagen
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE productos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio DECIMAL(10,2) NOT NULL,
+    imagen_principal VARCHAR(255),
+    categoria_id INT NOT NULL,
+    disponible BOOLEAN DEFAULT TRUE,
+    activo BOOLEAN DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE materiales (
+    producto_id INT PRIMARY KEY,
+    material VARCHAR(100),
+    suela VARCHAR(100),
+    forro VARCHAR(100),
+    puntera VARCHAR(100),
+    plantilla VARCHAR(100),
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE producto_talla (
+  producto_id INT PRIMARY KEY,
+  talla_desde INT NOT NULL,
+  talla_hasta INT NOT NULL,
+  FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE imagenes_producto (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    producto_id INT NOT NULL,
+    url VARCHAR(255) NOT NULL,          -- Ruta o URL de la imagen
+    angulo ENUM('superior', 'planta', 'lateral') NOT NULL,
+    orden INT DEFAULT 0,                 -- Para controlar el orden de las imágenes
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    correo VARCHAR(100) NOT NULL UNIQUE,
+    contrasena VARCHAR(255) NOT NULL, -- Hashed
+    telefono VARCHAR(20),
+    direccion TEXT,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla carrito (sin usuario)
+CREATE TABLE carrito (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Tabla carrito_detalle para productos agregados
+CREATE TABLE carrito_detalle (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    carrito_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    talla INT NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (carrito_id) REFERENCES carrito(id) ON DELETE CASCADE,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE pedidos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_comprador VARCHAR(100) NOT NULL,
+    correo_comprador VARCHAR(100) NOT NULL,
+    telefono_comprador VARCHAR(20),
+    direccion_comprador TEXT NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    es_envio BOOLEAN DEFAULT FALSE,
+    direccion_envio TEXT NULL,
+    ciudad_envio VARCHAR(100) NULL,
+    provincia_envio VARCHAR(100) NULL,
+    codigo_postal VARCHAR(20) NULL,
+    estado ENUM('pendiente', 'pagado', 'enviado', 'entregado', 'cancelado') DEFAULT 'pendiente',
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla detalle de cada pedido
+CREATE TABLE pedido_detalle (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT NOT NULL,
+    producto_id INT NOT NULL,
+    talla INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE RESTRICT
+);

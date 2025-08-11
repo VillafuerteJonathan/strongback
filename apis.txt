@@ -1,0 +1,38 @@
+-----------------------------------------------LOGIN ------------------------------------------
+1. Registrar un administrador (POST)
+URL: http://tu-servidor/endpoints/usuario_admin.php
+Método: POST
+Headers:
+Content-Type: application/json
+Body (JSON):
+json
+Copiar
+Editar
+{
+  "action": "register",
+  "nombre": "Admin Nuevo",
+  "correo": "nuevo@admin.com",
+  "contrasena": "12345678",
+  "telefono": "0999999999"
+}
+
+2. Login administrador (POST)
+URL: http://tu-servidor/endpoints/login.php
+
+Método: POST
+
+Headers:
+
+Content-Type: application/json
+
+Body (JSON):
+
+json
+Copiar
+Editar
+{
+  "correo": "admin@example.com",
+  "contrasena": "tuPassword123"
+}
+
+--------------------------------------------- CATEGORIAS -----------------------------------------------

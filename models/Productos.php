@@ -77,16 +77,12 @@ class Productos {
                 p.*,
                 t.talla_desde,
                 t.talla_hasta,
-                m.material,
-                m.suela,
-                m.forro,
-                m.puntera,
-                m.plantilla,
                 GROUP_CONCAT(DISTINCT i.url) AS imagenes_adicionales
             FROM productos p
             LEFT JOIN producto_talla t ON t.producto_id = p.id
             LEFT JOIN materiales m ON m.producto_id = p.id
             LEFT JOIN imagenes_producto i ON i.producto_id = p.id
+            WHERE p.estado = 1
             GROUP BY p.id
         ";
         $stmt = $this->db->prepare($sql);
@@ -115,6 +111,21 @@ class Productos {
                 ':categoria_id' => $data['categoria_id'],
                 ':disponible' => $data['disponible'],
                 ':imagen_principal' => $data['imagen_principal'],
+                ':id' => $id
+            ]);
+        } catch (Exception $e) {
+            error_log("Error al editar producto: " . $e->getMessage());
+            return false;
+        }
+    }
+     public function eliminarProducto($id, $data) {
+        try {
+            $sql = "UPDATE productos 
+                    SET estado := eliminado 
+                    WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute([
+                
                 ':id' => $id
             ]);
         } catch (Exception $e) {

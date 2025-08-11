@@ -1,5 +1,5 @@
 <?php
-// Permitir solicitudes CORS desde cualquier origen (puedes ajustar el dominio en lugar de '*')
+// Permitir solicitudes CORS desde cualquier origen (ajusta el dominio si quieres)
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS, DELETE, PUT");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-HTTP-Method-Override");
@@ -22,9 +22,8 @@ $controller = new CategoriaController($pdo);
 $method = $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] ?? $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-
     case 'GET':
-        if (isset($_GET['id'])) {
+        if (isset($_GET['id']) && is_numeric($_GET['id'])) {
             $data = $controller->obtenerPorId(intval($_GET['id']));
             if ($data) {
                 echo json_encode($data);
@@ -38,16 +37,15 @@ switch ($method) {
         break;
 
     case 'POST':
-        // Aquí definimos las dos acciones: crear y actualizar según un parámetro 'action'
         $action = $_POST['action'] ?? 'create';
 
         if ($action === 'create') {
+            // Validaciones para crear
             if (!isset($_FILES['imagen']) || $_FILES['imagen']['error'] !== UPLOAD_ERR_OK) {
                 http_response_code(400);
                 echo json_encode(["message" => "Imagen requerida"]);
                 exit;
             }
-
             $nombre = $_POST['nombre'] ?? null;
             $descripcion = $_POST['descripcion'] ?? null;
 
@@ -103,103 +101,110 @@ switch ($method) {
                 http_response_code(201);
                 echo json_encode([
                     "message" => "Categoría creada",
-                    "imagen_url" => $imagen_url
+                    "imagen_url" => $imagen_url,
+                    "id" => $result['id'] ?? null
                 ]);
             }
         } elseif ($action === 'update') {
-    $id = $_POST['id'] ?? null;
-    $nombre = $_POST['nombre'] ?? null;
-    $descripcion = $_POST['descripcion'] ?? null;
+            $id = $_POST['id'] ?? null;
+            $nombre = $_POST['nombre'] ?? null;
+            $descripcion = $_POST['descripcion'] ?? null;
 
-    if (!$id || !$nombre) {
-        http_response_code(400);
-        echo json_encode(["message" => "ID y nombre son requeridos"]);
-        exit;
-    }
+            if (!$id || !$nombre) {
+                http_response_code(400);
+                echo json_encode(["message" => "ID y nombre son requeridos"]);
+                exit;
+            }
 
-    $categoriaActual = $controller->obtenerPorId(intval($id));
-    if (!$categoriaActual) {
-        http_response_code(404);
-        echo json_encode(["message" => "Categoría no encontrada"]);
-        exit;
-    }
+            $categoriaActual = $controller->obtenerPorId(intval($id));
+            if (!$categoriaActual) {
+                http_response_code(404);
+                echo json_encode(["message" => "Categoría no encontrada"]);
+                exit;
+            }
 
-    // Inicialmente usar la imagen actual
-    $imagen_url = $categoriaActual['imagen_url'];
+            $imagen_url = $categoriaActual['imagen_url'];
 
-    // Si se subió una nueva imagen
-    if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-        $check = getimagesize($_FILES["imagen"]["tmp_name"]);
-        if ($check === false) {
-            http_response_code(400);
-            echo json_encode(["message" => "El archivo no es una imagen válida"]);
-            exit;
-        }
+            if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
+                $check = getimagesize($_FILES["imagen"]["tmp_name"]);
+                if ($check === false) {
+                    http_response_code(400);
+                    echo json_encode(["message" => "El archivo no es una imagen válida"]);
+                    exit;
+                }
 
-        $allowedTypes = ['image/jpeg', 'image/png'];
-        if (!in_array($_FILES['imagen']['type'], $allowedTypes)) {
-            http_response_code(400);
-            echo json_encode(["message" => "Solo se permiten imágenes JPG o PNG"]);
-            exit;
-        }
+                $allowedTypes = ['image/jpeg', 'image/png'];
+                if (!in_array($_FILES['imagen']['type'], $allowedTypes)) {
+                    http_response_code(400);
+                    echo json_encode(["message" => "Solo se permiten imágenes JPG o PNG"]);
+                    exit;
+                }
 
-        $targetDir = __DIR__ . '/../public/imagenes/caracteristicas/';
-        if (!file_exists($targetDir)) {
-            mkdir($targetDir, 0755, true);
-        }
+                $targetDir = __DIR__ . '/../public/imagenes/caracteristicas/';
+                if (!file_exists($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
 
-        $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-        $fileName = uniqid() . '.' . $ext;
-        $targetFile = $targetDir . $fileName;
+                $ext = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+                $fileName = uniqid() . '.' . $ext;
+                $targetFile = $targetDir . $fileName;
 
-        if (!move_uploaded_file($_FILES['imagen']['tmp_name'], $targetFile)) {
-            http_response_code(500);
-            echo json_encode(["message" => "Error al subir la imagen"]);
-            exit;
-        }
+                if (!move_uploaded_file($_FILES['imagen']['tmp_name'], $targetFile)) {
+                    http_response_code(500);
+                    echo json_encode(["message" => "Error al subir la imagen"]);
+                    exit;
+                }
 
-        $imagen_url = 'imagenes/caracteristicas/' . $fileName;
+                $imagen_url = 'imagenes/caracteristicas/' . $fileName;
 
-        // Borrar la imagen anterior si existe
-        if (!empty($categoriaActual['imagen_url'])) {
-            $imagenAntiguaPath = __DIR__ . '/../public/' . $categoriaActual['imagen_url'];
-            if (file_exists($imagenAntiguaPath)) {
-                unlink($imagenAntiguaPath);
+                // Borrar imagen antigua
+                if (!empty($categoriaActual['imagen_url'])) {
+                    $imagenAntiguaPath = __DIR__ . '/../public/' . $categoriaActual['imagen_url'];
+                    if (file_exists($imagenAntiguaPath)) {
+                        unlink($imagenAntiguaPath);
+                    }
+                }
+            }
+
+            $data = [
+                'id' => intval($id),
+                'nombre' => $nombre,
+                'descripcion' => $descripcion,
+                'imagen_url' => $imagen_url
+            ];
+
+            $result = $controller->actualizar($data);
+
+            if (!$result) {
+                http_response_code(500);
+                echo json_encode(["message" => "Error al actualizar"]);
+            } else {
+                echo json_encode(["message" => "Categoría actualizada correctamente"]);
             }
         }
-    }
-
-    $data = [
-        'id' => intval($id),
-        'nombre' => $nombre,
-        'descripcion' => $descripcion,
-        'imagen_url' => $imagen_url // Siempre incluir la imagen actual o nueva
-    ];
-
-    $result = $controller->actualizar($data);
-
-    if (!$result) {
-        http_response_code(500);
-        echo json_encode(["message" => "Error al actualizar"]);
-    } else {
-        echo json_encode(["message" => "Categoría actualizada correctamente"]);
-    }
-}
         break;
 
     case 'DELETE':
-        if (!isset($_GET['id'])) {
+        if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
             http_response_code(400);
-            echo json_encode(["message" => "ID es requerido para eliminar"]);
+            echo json_encode(["message" => "ID válido es requerido para eliminar"]);
             break;
         }
 
-        $result = $controller->eliminar(intval($_GET['id']));
-        if (!$result) {
+        $id = intval($_GET['id']);
+
+        try {
+            $result = $controller->eliminar($id);
+            if (!$result) {
+                http_response_code(404);
+                echo json_encode(["message" => "Categoría no encontrada o ya eliminada"]);
+            } else {
+                echo json_encode(["message" => "Categoría eliminada correctamente"]);
+            }
+        } catch (Exception $e) {
             http_response_code(500);
-            echo json_encode(["message" => "Error al eliminar"]);
-        } else {
-            echo json_encode(["message" => "Categoría eliminada"]);
+            echo json_encode(["message" => "Error interno al eliminar la categoría"]);
+            error_log("Error en DELETE categoria: " . $e->getMessage());
         }
         break;
 

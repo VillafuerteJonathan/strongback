@@ -14,6 +14,7 @@ class Categoria {
         $this->conn = $db;
     }
 
+    // Obtiene todas las categorías activas
     public function obtenerTodas() {
         $query = "SELECT * FROM {$this->table} WHERE activo = TRUE ORDER BY creado_en DESC";
         $stmt = $this->conn->prepare($query);
@@ -21,8 +22,14 @@ class Categoria {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function obtenerPorId() {
-        $query = "SELECT * FROM {$this->table} WHERE id = :id AND activo = TRUE LIMIT 1";
+    // Obtiene categoría por ID, filtra por activo por defecto
+    public function obtenerPorId($filtrarActivo = true) {
+        $query = "SELECT * FROM {$this->table} WHERE id = :id";
+        if ($filtrarActivo) {
+            $query .= " AND activo = TRUE";
+        }
+        $query .= " LIMIT 1";
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $this->id);
         $stmt->execute();
@@ -35,7 +42,11 @@ class Categoria {
         $stmt->bindParam(':nombre', $this->nombre);
         $stmt->bindParam(':descripcion', $this->descripcion);
         $stmt->bindParam(':imagen_url', $this->imagen_url);
-        return $stmt->execute();
+
+        if ($stmt->execute()) {
+            return $this->conn->lastInsertId();
+        }
+        return false;
     }
 
     public function actualizar() {
@@ -45,14 +56,55 @@ class Categoria {
         $stmt->bindParam(':descripcion', $this->descripcion);
         $stmt->bindParam(':imagen_url', $this->imagen_url);
         $stmt->bindParam(':id', $this->id);
-        return $stmt->execute();
+
+        $stmt->execute();
+        return $stmt->rowCount() > 0;
+    }
+    
+    // Corregido: usar $this->conn en vez de $this->db
+    public function inactivarProductosPorCategoria($categoria_id) {
+        try {
+            $sql = "UPDATE productos 
+                    SET estado = 0 
+                    WHERE categoria_id = :categoria_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                ':categoria_id' => $categoria_id
+            ]);
+        } catch (Exception $e) {
+            error_log("Error al inactivar productos por categoría: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function eliminar() {
-        $query = "UPDATE {$this->table} SET activo = FALSE WHERE id = :id";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(':id', $this->id);
-        return $stmt->execute();
+        try {
+            $this->conn->beginTransaction();
+
+            // Inactivar la categoría
+            $query = "UPDATE {$this->table} SET activo = 0 WHERE id = :id AND activo = 1";
+            $stmt = $this->conn->prepare($query);
+            $stmt->bindValue(':id', $this->id, PDO::PARAM_INT);
+            $stmt->execute();
+
+            if ($stmt->rowCount() === 0) {
+                $this->conn->rollBack();
+                return false;
+            }
+
+            // Inactivar productos de la categoría
+            if (!$this->inactivarProductosPorCategoria($this->id)) {
+                $this->conn->rollBack();
+                return false;
+            }
+
+            $this->conn->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Error al eliminar categoría y productos: " . $e->getMessage());
+            return false;
+        }
     }
 }
-
