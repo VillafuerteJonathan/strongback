@@ -10,9 +10,9 @@ class Productos {
         try {
             $this->db->beginTransaction();
 
-            // Insertar producto base
-            $sql = "INSERT INTO productos (nombre, descripcion, precio, categoria_id, disponible, imagen_principal) 
-                    VALUES (:nombre, :descripcion, :precio, :categoria_id, :disponible, :imagen_principal)";
+            // Insertar producto
+            $sql = "INSERT INTO productos (nombre, descripcion, precio, categoria_id, disponible, imagen_principal, estado) 
+                    VALUES (:nombre, :descripcion, :precio, :categoria_id, :disponible, :imagen_principal, 1)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 ':nombre' => $data['nombre'],
@@ -48,17 +48,18 @@ class Productos {
             ]);
 
             // Insertar imágenes adicionales
-            $sqlImg = "INSERT INTO imagenes_producto (producto_id, url, angulo, orden) 
-                       VALUES (:producto_id, :url, :angulo, :orden)";
-            $stmtImg = $this->db->prepare($sqlImg);
-
-            foreach ($imagenes as $angulo => $url) {
-                $stmtImg->execute([
-                    ':producto_id' => $producto_id,
-                    ':url' => $url,
-                    ':angulo' => $angulo,
-                    ':orden' => 0,
-                ]);
+            if (!empty($imagenes)) {
+                $sqlImg = "INSERT INTO imagenes_producto (producto_id, url, angulo, orden) 
+                           VALUES (:producto_id, :url, :angulo, :orden)";
+                $stmtImg = $this->db->prepare($sqlImg);
+                foreach ($imagenes as $angulo => $url) {
+                    $stmtImg->execute([
+                        ':producto_id' => $producto_id,
+                        ':url' => $url,
+                        ':angulo' => $angulo,
+                        ':orden' => 0,
+                    ]);
+                }
             }
 
             $this->db->commit();
@@ -77,6 +78,11 @@ class Productos {
                 p.*,
                 t.talla_desde,
                 t.talla_hasta,
+                m.material,
+                m.suela,
+                m.forro,
+                m.puntera,
+                m.plantilla,
                 GROUP_CONCAT(DISTINCT i.url) AS imagenes_adicionales
             FROM productos p
             LEFT JOIN producto_talla t ON t.producto_id = p.id
@@ -118,19 +124,17 @@ class Productos {
             return false;
         }
     }
-     public function eliminarProducto($id, $data) {
-        try {
-            $sql = "UPDATE productos 
-                    SET estado := eliminado 
-                    WHERE id = :id";
-            $stmt = $this->db->prepare($sql);
-            return $stmt->execute([
-                
-                ':id' => $id
-            ]);
-        } catch (Exception $e) {
-            error_log("Error al editar producto: " . $e->getMessage());
-            return false;
+        public function eliminarProducto($id) {
+            try {
+                $sql = "UPDATE productos 
+                        SET estado = 0 
+                        WHERE id = :id";
+                $stmt = $this->db->prepare($sql);
+                return $stmt->execute([':id' => $id]);
+            } catch (Exception $e) {
+                error_log("Error al inactivar producto: " . $e->getMessage());
+                return false;
+            }
         }
-    }
+
 }

@@ -29,7 +29,7 @@ CREATE TABLE productos (
     imagen_principal VARCHAR(255),
     categoria_id INT NOT NULL,
     disponible BOOLEAN DEFAULT TRUE,
-    activo BOOLEAN DEFAULT TRUE,
+    estado BOOLEAN DEFAULT TRUE,
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT
 );

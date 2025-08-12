@@ -23,4 +23,7 @@ class ProductosController {
     public function editar($id, $data) {
         return $this->model->editarProducto($id, $data);
     }
+     public function eliminar($id) {
+        return $this->model->eliminarProducto($id);
+    }
 }

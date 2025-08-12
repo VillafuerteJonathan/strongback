@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json');
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST,PUT, OPTIONS");
+header("Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS, DELETE");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-HTTP-Method-Override");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -131,7 +131,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     exit();
 }
+if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    // Primero tratar de obtener id desde $_GET
+    $id = isset($_GET['id']) ? intval($_GET['id']) : null;
 
-// Si no es GET ni POST válido
+    // Si no está en GET, tratar de obtener desde el cuerpo (php://input)
+    if (!$id) {
+        parse_str(file_get_contents("php://input"), $deleteVars);
+        $id = isset($deleteVars['id']) ? intval($deleteVars['id']) : null;
+    }
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(['message' => 'ID de producto requerido para eliminar']);
+        exit();
+    }
+
+    $eliminado = $controller->eliminar($id);
+    if ($eliminado) {
+        http_response_code(200);
+        echo json_encode(['message' => 'Producto eliminado correctamente (inactivado)']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['message' => 'Error al eliminar producto']);
+    }
+    exit();
+
+}
+
+// Si no es GET ni POST ni DELETE válido
 http_response_code(405);
 echo json_encode(['message' => 'Método no permitido']);
