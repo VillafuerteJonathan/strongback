@@ -48,19 +48,24 @@ class Productos {
             ]);
 
             // Insertar imágenes adicionales
+          // Insertar imágenes adicionales
             if (!empty($imagenes)) {
                 $sqlImg = "INSERT INTO imagenes_producto (producto_id, url, angulo, orden) 
-                           VALUES (:producto_id, :url, :angulo, :orden)";
+                        VALUES (:producto_id, :url, :angulo, :orden)";
                 $stmtImg = $this->db->prepare($sqlImg);
+
+                $orden = 1; // empezamos desde 1
                 foreach ($imagenes as $angulo => $url) {
                     $stmtImg->execute([
                         ':producto_id' => $producto_id,
                         ':url' => $url,
                         ':angulo' => $angulo,
-                        ':orden' => 0,
+                        ':orden' => $orden,
                     ]);
+                    $orden++;
                 }
             }
+
 
             $this->db->commit();
             return true;
