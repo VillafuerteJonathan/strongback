@@ -1,7 +1,7 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $db_name = "strongecommerce";
+    private $db_name = "strongchat";
     private $username = "root";      // Cambia si usas otro usuario
     private $password = "";          // Cambia si tienes contraseña
     public $conn;

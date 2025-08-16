@@ -141,5 +141,19 @@ class Productos {
                 return false;
             }
         }
+         // Obtener los últimos 5 productos añadidos
+    // Obtener los últimos 5 productos añadidos
+public function getUltimosProductos($limite = 6) {
+    $query = "SELECT p.id, p.nombre, p.descripcion, p.precio, p.imagen_principal AS imagen_url, c.nombre AS categoria, p.creado_en
+              FROM productos p
+              JOIN categorias c ON p.categoria_id = c.id
+              ORDER BY p.creado_en DESC
+              LIMIT :limite";
+    $stmt = $this->db->prepare($query); // ✅ usar $this->db
+    $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
 
 }
